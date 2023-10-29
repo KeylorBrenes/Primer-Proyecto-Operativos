@@ -7,7 +7,6 @@
 #include <unistd.h> // Para usar usleep
 #include <limits.h>
 
-
 // Definición de una carta
 typedef struct
 {
@@ -30,7 +29,6 @@ typedef struct
     Jugador jugador2;
     int jugadas; // Número de jugadas realizadas en este juego
     int id;      // Identificador único del juego
-    // ... (otras variables relacionadas con el juego, como el estado de E/S, etc.)
 } Juego;
 
 // Variables globales
@@ -66,16 +64,51 @@ typedef struct
 BCP *bcp; // Un puntero a un arreglo de BCP
 TablaProcesos tabla_procesos;
 
-void agregar_a_bloqueados(Juego *juego) {
+// Definición de un nodo para la lista de terminados
+typedef struct NodoTerminado
+{
+    Juego *juego;
+    struct NodoTerminado *siguiente;
+} NodoTerminado;
+// Cabeza de la lista de terminados
+NodoTerminado *cabeza_terminados = NULL;
+// Función para agregar un juego a la lista de terminados
+void agregar_a_terminados(Juego *juego)
+{
+    NodoTerminado *nuevo_nodo = (NodoTerminado *)malloc(sizeof(NodoTerminado));
+    nuevo_nodo->juego = juego;
+    nuevo_nodo->siguiente = NULL;
+
+    if (!cabeza_terminados)
+    {
+        cabeza_terminados = nuevo_nodo;
+    }
+    else
+    {
+        NodoTerminado *actual = cabeza_terminados;
+        while (actual->siguiente)
+        {
+            actual = actual->siguiente;
+        }
+        actual->siguiente = nuevo_nodo;
+    }
+}
+
+void agregar_a_bloqueados(Juego *juego)
+{
     NodoBloqueado *nuevo_nodo = (NodoBloqueado *)malloc(sizeof(NodoBloqueado));
     nuevo_nodo->juego = juego;
     nuevo_nodo->siguiente = NULL;
 
-    if (lista_bloqueados == NULL) {
+    if (lista_bloqueados == NULL)
+    {
         lista_bloqueados = nuevo_nodo;
-    } else {
+    }
+    else
+    {
         NodoBloqueado *temp = lista_bloqueados;
-        while (temp->siguiente != NULL) {
+        while (temp->siguiente != NULL)
+        {
             temp = temp->siguiente;
         }
         temp->siguiente = nuevo_nodo;
@@ -83,15 +116,21 @@ void agregar_a_bloqueados(Juego *juego) {
 }
 
 // Función para eliminar un juego de la lista de bloqueados
-void eliminar_de_bloqueados(Juego *juego) {
+void eliminar_de_bloqueados(Juego *juego)
+{
     NodoBloqueado *previo = NULL;
     NodoBloqueado *actual = lista_bloqueados;
 
-    while (actual != NULL) {
-        if (actual->juego == juego) {
-            if (previo == NULL) {
+    while (actual != NULL)
+    {
+        if (actual->juego == juego)
+        {
+            if (previo == NULL)
+            {
                 lista_bloqueados = actual->siguiente;
-            } else {
+            }
+            else
+            {
                 previo->siguiente = actual->siguiente;
             }
 
@@ -150,6 +189,7 @@ void inicializar_jugadas_para_escribir()
 {
     jugadas_para_escribir = rand() % 11 + 5; // Valor aleatorio entre 5 y 15
 }
+// Función para escribir en el archivo
 void escribir_en_archivo(Juego *juego)
 {
     char nombre_archivo[20];
@@ -217,10 +257,11 @@ void jugar_turno(Jugador *jugador1, Jugador *jugador2, Juego *juegoActual, int n
     if (jugadas_para_escribir == 0)
     {
         escribir_en_archivo(&juegos[numero_juego - 1]);
-        agregar_a_bloqueados(juegoActual); // Agregar el juego a la lista de bloqueados
-        usleep((rand() % 6 + 5) * 1000); // Dormir entre 5 y 10 milisegundos
+        agregar_a_bloqueados(juegoActual);   // Agregar el juego a la lista de bloqueados
+        usleep((rand() % 6 + 5) * 1000);     // Dormir entre 5 y 10 milisegundos
         eliminar_de_bloqueados(juegoActual); // Eliminar el juego de la lista de bloqueados
-        if (juegoActual->jugador1.num_cartas > 0 && juegoActual->jugador2.num_cartas > 0) {
+        if (juegoActual->jugador1.num_cartas > 0 && juegoActual->jugador2.num_cartas > 0)
+        {
             agregar_a_listos(juegoActual); // Si el juego no ha terminado, agregarlo de nuevo a la lista de listos
         }
         inicializar_jugadas_para_escribir();
@@ -307,14 +348,17 @@ float calcular_promedio(Juego *juego)
     return (juego->jugador1.num_cartas + juego->jugador1.puntos) / 2.0;
 }
 
-Juego *seleccionar_juego_fsj() {
+Juego *seleccionar_juego_fsj()
+{
     Nodo *nodo_actual = lista_listos;
     Juego *juego_seleccionado = NULL;
     int min_cartas = INT_MAX;
 
-    while (nodo_actual != NULL) {
+    while (nodo_actual != NULL)
+    {
         int total_cartas = nodo_actual->juego->jugador1.num_cartas + nodo_actual->juego->jugador2.num_cartas;
-        if (total_cartas < min_cartas) {
+        if (total_cartas < min_cartas)
+        {
             min_cartas = total_cartas;
             juego_seleccionado = nodo_actual->juego;
         }
@@ -364,13 +408,16 @@ void eliminar_juego(Juego *juego)
     }
 }
 
-void ejecutar_fsj() {
-    while (lista_listos != NULL) {
+void ejecutar_fsj()
+{
+    while (lista_listos != NULL)
+    {
         Juego *juego_seleccionado = seleccionar_juego_fsj();
         if (juego_seleccionado == NULL)
             break;
 
-        while (juego_seleccionado->jugador1.num_cartas > 0 && juego_seleccionado->jugador2.num_cartas > 0) {
+        while (juego_seleccionado->jugador1.num_cartas > 0 && juego_seleccionado->jugador2.num_cartas > 0)
+        {
             jugar_turno(&(juego_seleccionado->jugador1), &(juego_seleccionado->jugador2), juego_seleccionado, juego_seleccionado->id, juego_seleccionado->jugadas + 1);
         }
 

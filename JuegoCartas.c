@@ -37,6 +37,14 @@ int num_juegos; // Número de juegos
 
 pthread_mutex_t lock; // Bloqueo para sincronización de hilos
 
+typedef struct NodoBloqueado
+{
+    Juego *juego;
+    struct NodoBloqueado *siguiente;
+} NodoBloqueado;
+
+NodoBloqueado *lista_bloqueados = NULL;
+
 typedef struct
 {
     int num_iteraciones; // Jugadas hechas
@@ -55,6 +63,44 @@ typedef struct
 
 BCP *bcp; // Un puntero a un arreglo de BCP
 TablaProcesos tabla_procesos;
+
+void agregar_a_bloqueados(Juego *juego) {
+    NodoBloqueado *nuevo_nodo = (NodoBloqueado *)malloc(sizeof(NodoBloqueado));
+    nuevo_nodo->juego = juego;
+    nuevo_nodo->siguiente = NULL;
+
+    if (lista_bloqueados == NULL) {
+        lista_bloqueados = nuevo_nodo;
+    } else {
+        NodoBloqueado *temp = lista_bloqueados;
+        while (temp->siguiente != NULL) {
+            temp = temp->siguiente;
+        }
+        temp->siguiente = nuevo_nodo;
+    }
+}
+
+// Función para eliminar un juego de la lista de bloqueados
+void eliminar_de_bloqueados(Juego *juego) {
+    NodoBloqueado *previo = NULL;
+    NodoBloqueado *actual = lista_bloqueados;
+
+    while (actual != NULL) {
+        if (actual->juego == juego) {
+            if (previo == NULL) {
+                lista_bloqueados = actual->siguiente;
+            } else {
+                previo->siguiente = actual->siguiente;
+            }
+
+            free(actual);
+            return;
+        }
+
+        previo = actual;
+        actual = actual->siguiente;
+    }
+}
 
 // Función para inicializar un mazo de cartas
 void inicializar_mazo(Carta *mazo)
@@ -119,7 +165,8 @@ void escribir_en_archivo(Juego *juego)
 
     fclose(archivo);
 }
-
+// Función para agregar un juego a la lista de listos para que jugar_turno lo ejecute
+void agregar_a_listos(Juego *juego);
 // Función para jugar un turno
 void jugar_turno(Jugador *jugador1, Jugador *jugador2, Juego *juegoActual, int numero_juego, int numero_jugada)
 {
@@ -164,12 +211,16 @@ void jugar_turno(Jugador *jugador1, Jugador *jugador2, Juego *juegoActual, int n
     }
     // Después de cada jugada, decrementa el valor de jugadas_para_escribir
     jugadas_para_escribir--;
-
     // Si jugadas_para_escribir es 0, escribe en el archivo y reinicia el valor
     if (jugadas_para_escribir == 0)
     {
         escribir_en_archivo(&juegos[numero_juego - 1]);
+        agregar_a_bloqueados(juegoActual); // Agregar el juego a la lista de bloqueados
         usleep((rand() % 6 + 5) * 1000); // Dormir entre 5 y 10 milisegundos
+        eliminar_de_bloqueados(juegoActual); // Eliminar el juego de la lista de bloqueados
+        if (juegoActual->jugador1.num_cartas > 0 && juegoActual->jugador2.num_cartas > 0) {
+            agregar_a_listos(juegoActual); // Si el juego no ha terminado, agregarlo de nuevo a la lista de listos
+        }
         inicializar_jugadas_para_escribir();
     }
 }
@@ -284,9 +335,6 @@ void *rutina_hilo_fsj(void *arg)
         jugar_turno(&(juego->jugador1), &(juego->jugador2), juego, juego->id, bcp[indice_bcp].num_iteraciones + 1);
     }
 
-    // Simulando operación de E/S: escribir en un archivo (esto se implementará en el futuro)
-    printf("Operación de E/S: escribiendo en archivo...\n");
-
     return NULL;
 }
 
@@ -392,14 +440,6 @@ void seleccionar_y_ejecutar_algoritmo()
     tabla_procesos.promedio_tiempo_espera_ES = total_tiempo_espera_ES / num_juegos;
     tabla_procesos.promedio_tiempo_espera_listo = total_tiempo_espera_listo / num_juegos;
 }
-
-typedef struct NodoBloqueado
-{
-    Juego *juego;
-    struct NodoBloqueado *siguiente;
-} NodoBloqueado;
-
-NodoBloqueado *lista_bloqueados = NULL;
 
 void inicializar_juegos()
 {

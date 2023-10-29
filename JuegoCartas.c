@@ -95,8 +95,30 @@ void distribuir_cartas(Jugador *jugador1, Jugador *jugador2, Carta *mazo)
     jugador1->num_cartas = jugador2->num_cartas = 26;
     jugador1->puntos = jugador2->puntos = 0;
 }
+// Variable global para almacenar el número aleatorio de jugadas antes de escribir en el archivo
+int jugadas_para_escribir;
+// Función para inicializar el valor aleatorio de jugadas_para_escribir
+void inicializar_jugadas_para_escribir()
+{
+    jugadas_para_escribir = rand() % 11 + 5; // Valor aleatorio entre 5 y 15
+}
+void escribir_en_archivo(Juego *juego)
+{
+    char nombre_archivo[20];
+    snprintf(nombre_archivo, sizeof(nombre_archivo), "jugadas_%d.txt", juego->id);
 
-void inicializar_jugadas_para_escribir();
+    FILE *archivo = fopen(nombre_archivo, "a");
+    if (archivo == NULL)
+    {
+        perror("Error al abrir el archivo");
+        return;
+    }
+
+    fprintf(archivo, "Jugador 1: %d puntos, Jugador 2: %d puntos\n",
+            juego->jugador1.puntos, juego->jugador2.puntos);
+
+    fclose(archivo);
+}
 
 // Función para jugar un turno
 void jugar_turno(Jugador *jugador1, Jugador *jugador2, Juego *juegoActual, int numero_juego, int numero_jugada)
@@ -378,31 +400,6 @@ typedef struct NodoBloqueado
 } NodoBloqueado;
 
 NodoBloqueado *lista_bloqueados = NULL;
-
-// Variable global para almacenar el número aleatorio de jugadas antes de escribir en el archivo
-int jugadas_para_escribir;
-// Función para inicializar el valor aleatorio de jugadas_para_escribir
-void inicializar_jugadas_para_escribir()
-{
-    jugadas_para_escribir = rand() % 11 + 5; // Valor aleatorio entre 5 y 15
-}
-void escribir_en_archivo(Juego *juego)
-{
-    char nombre_archivo[20];
-    snprintf(nombre_archivo, sizeof(nombre_archivo), "jugadas_%d.txt", juego->id);
-
-    FILE *archivo = fopen(nombre_archivo, "a");
-    if (archivo == NULL)
-    {
-        perror("Error al abrir el archivo");
-        return;
-    }
-
-    fprintf(archivo, "Jugador 1: %d puntos, Jugador 2: %d puntos\n",
-            juego->jugador1.puntos, juego->jugador2.puntos);
-
-    fclose(archivo);
-}
 
 void inicializar_juegos()
 {

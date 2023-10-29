@@ -434,5 +434,10 @@ int main()
         free(juegos[i].jugador2.mazo);
     }
     free(juegos);
+
+    printf("Promedio de jugadas hechas: %f\n", tabla_procesos.promedio_num_iteraciones);
+    printf("Promedio de tiempo de espera en E/S: %f\n", tabla_procesos.promedio_tiempo_espera_ES);
+    printf("Promedio de tiempo de espera en listo: %f\n", tabla_procesos.promedio_tiempo_espera_listo);
+    
     return 0;
 }

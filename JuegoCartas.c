@@ -96,8 +96,10 @@ void distribuir_cartas(Jugador *jugador1, Jugador *jugador2, Carta *mazo)
     jugador1->puntos = jugador2->puntos = 0;
 }
 
+void inicializar_jugadas_para_escribir();
+
 // Función para jugar un turno
-void jugar_turno(Jugador *jugador1, Jugador *jugador2, int numero_juego, int numero_jugada)
+void jugar_turno(Jugador *jugador1, Jugador *jugador2, Juego *juegoActual, int numero_juego, int numero_jugada)
 {
     // Asegurarse de que ambos jugadores tengan cartas
     if (jugador1->num_cartas > 0 && jugador2->num_cartas > 0)
@@ -138,6 +140,16 @@ void jugar_turno(Jugador *jugador1, Jugador *jugador2, int numero_juego, int num
         // Imprimir la puntuación actual
         printf("Puntuación actual del juego #%d: Jugador 1: %d - Jugador 2: %d\n", numero_juego, jugador1->puntos, jugador2->puntos);
     }
+    // Después de cada jugada, decrementa el valor de jugadas_para_escribir
+    jugadas_para_escribir--;
+
+    // Si jugadas_para_escribir es 0, escribe en el archivo y reinicia el valor
+    if (jugadas_para_escribir == 0)
+    {
+        escribir_en_archivo(&juegos[numero_juego - 1]);
+        usleep((rand() % 6 + 5) * 1000); // Dormir entre 5 y 10 milisegundos
+        inicializar_jugadas_para_escribir();
+    }
 }
 
 typedef struct Nodo
@@ -153,7 +165,6 @@ Juego *juegos;
 void escribir_en_archivo(Juego *juego);
 void agregar_a_listos(Juego *juego);
 
-
 void *rutina_hilo(void *arg)
 {
     Juego *juego = (Juego *)arg;
@@ -166,7 +177,7 @@ void *rutina_hilo(void *arg)
     for (int i = 0; i < quantum && juego->jugador1.num_cartas > 0 && juego->jugador2.num_cartas > 0; i++)
     {
         bcp[indice_bcp].num_iteraciones++;
-        jugar_turno(&(juego->jugador1), &(juego->jugador2), juego->id, bcp[indice_bcp].num_iteraciones);
+        jugar_turno(&(juego->jugador1), &(juego->jugador2), juego, juego->id, bcp[indice_bcp].num_iteraciones);
     }
 
     // Si el juego no ha terminado, reubicarlo al final de la cola de listos.
@@ -178,25 +189,29 @@ void *rutina_hilo(void *arg)
     return NULL;
 }
 
-void agregar_a_listos(Juego *juego) {
+void agregar_a_listos(Juego *juego)
+{
     Nodo *nuevo_nodo = (Nodo *)malloc(sizeof(Nodo));
     nuevo_nodo->juego = juego;
-    nuevo_nodo->siguiente = NULL;  // inicializar siguiente a NULL
+    nuevo_nodo->siguiente = NULL; // inicializar siguiente a NULL
 
-    if (lista_listos == NULL) {
+    if (lista_listos == NULL)
+    {
         // Si la lista está vacía, establecer nuevo_nodo como la cabeza de la lista
         lista_listos = nuevo_nodo;
-    } else {
+    }
+    else
+    {
         // Si la lista no está vacía, encontrar el último nodo en la lista
         Nodo *temp = lista_listos;
-        while (temp->siguiente != NULL) {
+        while (temp->siguiente != NULL)
+        {
             temp = temp->siguiente;
         }
         // Insertar nuevo_nodo al final de la lista
         temp->siguiente = nuevo_nodo;
     }
 }
-
 
 void ejecutar_listos()
 {
@@ -244,7 +259,7 @@ void *rutina_hilo_fsj(void *arg)
     while (juego->jugador1.num_cartas > 0 && juego->jugador2.num_cartas > 0)
     {
         bcp[indice_bcp].num_iteraciones++;
-        jugar_turno(&(juego->jugador1), &(juego->jugador2), juego->id, bcp[indice_bcp].num_iteraciones + 1);
+        jugar_turno(&(juego->jugador1), &(juego->jugador2), juego, juego->id, bcp[indice_bcp].num_iteraciones + 1);
     }
 
     // Simulando operación de E/S: escribir en un archivo (esto se implementará en el futuro)
@@ -364,6 +379,13 @@ typedef struct NodoBloqueado
 
 NodoBloqueado *lista_bloqueados = NULL;
 
+// Variable global para almacenar el número aleatorio de jugadas antes de escribir en el archivo
+int jugadas_para_escribir;
+// Función para inicializar el valor aleatorio de jugadas_para_escribir
+void inicializar_jugadas_para_escribir()
+{
+    jugadas_para_escribir = rand() % 11 + 5; // Valor aleatorio entre 5 y 15
+}
 void escribir_en_archivo(Juego *juego)
 {
     char nombre_archivo[20];
@@ -403,6 +425,7 @@ void inicializar_juegos()
         distribuir_cartas(&(juegos[i].jugador1), &(juegos[i].jugador2), mazo);
 
         agregar_a_listos(&juegos[i]);
+        inicializar_jugadas_para_escribir();
     }
 
     for (int i = 0; i < num_juegos; i++)
@@ -427,6 +450,7 @@ int main()
     inicializar_juegos();
     // Seleccionar y ejecutar el algoritmo de planificación
     seleccionar_y_ejecutar_algoritmo();
+    inicializar_jugadas_para_escribir();
     free(bcp);
     for (int i = 0; i < num_juegos; i++)
     {
@@ -438,6 +462,6 @@ int main()
     printf("Promedio de jugadas hechas: %f\n", tabla_procesos.promedio_num_iteraciones);
     printf("Promedio de tiempo de espera en E/S: %f\n", tabla_procesos.promedio_tiempo_espera_ES);
     printf("Promedio de tiempo de espera en listo: %f\n", tabla_procesos.promedio_tiempo_espera_listo);
-    
+
     return 0;
 }

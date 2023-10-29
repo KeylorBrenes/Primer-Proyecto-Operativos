@@ -5,6 +5,8 @@
 #include <time.h>
 #include <float.h>
 #include <unistd.h> // Para usar usleep
+#include <limits.h>
+
 
 // Definición de una carta
 typedef struct
@@ -305,18 +307,15 @@ float calcular_promedio(Juego *juego)
     return (juego->jugador1.num_cartas + juego->jugador1.puntos) / 2.0;
 }
 
-Juego *seleccionar_juego_fsj()
-{
+Juego *seleccionar_juego_fsj() {
     Nodo *nodo_actual = lista_listos;
     Juego *juego_seleccionado = NULL;
-    float promedio_minimo = FLT_MAX;
+    int min_cartas = INT_MAX;
 
-    while (nodo_actual != NULL)
-    {
-        float promedio = calcular_promedio(nodo_actual->juego);
-        if (promedio < promedio_minimo)
-        {
-            promedio_minimo = promedio;
+    while (nodo_actual != NULL) {
+        int total_cartas = nodo_actual->juego->jugador1.num_cartas + nodo_actual->juego->jugador2.num_cartas;
+        if (total_cartas < min_cartas) {
+            min_cartas = total_cartas;
             juego_seleccionado = nodo_actual->juego;
         }
         nodo_actual = nodo_actual->siguiente;
@@ -365,19 +364,17 @@ void eliminar_juego(Juego *juego)
     }
 }
 
-void ejecutar_fsj()
-{
-    while (lista_listos != NULL)
-    {
+void ejecutar_fsj() {
+    while (lista_listos != NULL) {
         Juego *juego_seleccionado = seleccionar_juego_fsj();
         if (juego_seleccionado == NULL)
-            break; // No hay juegos en la lista de listos
+            break;
 
-        pthread_t hilo;
-        pthread_create(&hilo, NULL, rutina_hilo_fsj, (void *)juego_seleccionado);
-        pthread_join(hilo, NULL);
+        while (juego_seleccionado->jugador1.num_cartas > 0 && juego_seleccionado->jugador2.num_cartas > 0) {
+            jugar_turno(&(juego_seleccionado->jugador1), &(juego_seleccionado->jugador2), juego_seleccionado, juego_seleccionado->id, juego_seleccionado->jugadas + 1);
+        }
 
-        eliminar_juego(juego_seleccionado); // Eliminar el juego seleccionado de la lista de listos
+        eliminar_juego(juego_seleccionado);
     }
 }
 
